@@ -1,0 +1,128 @@
+import pygame
+import random
+
+# Initialize Pygame
+pygame.init()
+
+# Define screen dimensions
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Simple Slicing Game")
+
+# Define colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+
+# Set the frame rate
+FPS = 60
+clock = pygame.time.Clock()
+
+# Object class
+class SliceObject:
+    def __init__(self):
+        # Set up the object with random size and starting position
+        self.size = random.randint(30, 50)
+        self.rect = pygame.Rect(
+            random.randint(0, WIDTH - self.size),
+            random.randint(0, HEIGHT - self.size),
+            self.size,
+            self.size
+        )
+        self.color = RED
+        self.speed_x = random.choice([-3, 3])
+        self.speed_y = random.choice([-3, 3])
+        self.sliced = False
+
+    def move(self):
+        if not self.sliced:
+            self.rect.x += self.speed_x
+            self.rect.y += self.speed_y
+
+            # Bounce on edges
+            if self.rect.left < 0 or self.rect.right > WIDTH:
+                self.speed_x = -self.speed_x
+            if self.rect.top < 0 or self.rect.bottom > HEIGHT:
+                self.speed_y = -self.speed_y
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.rect)
+
+    def slice(self):
+        # If sliced, change color and size (split into two halves as placeholder)
+        self.sliced = True
+        self.color = GREEN
+        self.size //= 2
+        self.rect.width = self.size
+        self.rect.height = self.size
+
+# Button class for slicing
+class SliceButton:
+    def __init__(self):
+        self.pressed = False
+
+    def check_slicing(self, objects, mouse_pos):
+        for obj in objects:
+            if obj.rect.collidepoint(mouse_pos) and not obj.sliced:
+                obj.slice()
+
+# Game class for controlling levels
+class Game:
+    def __init__(self):
+        self.objects = []
+        self.level = 1
+        self.spawn_delay = 2000  # Delay in milliseconds
+        self.last_spawn_time = 0
+        self.button = SliceButton()
+
+    def spawn_object(self):
+        new_object = SliceObject()
+        self.objects.append(new_object)
+
+    def update_level(self):
+        if pygame.time.get_ticks() - self.last_spawn_time > self.spawn_delay:
+            self.spawn_object()
+            self.last_spawn_time = pygame.time.get_ticks()
+        
+        # Increase difficulty by speeding up objects as levels increase
+        for obj in self.objects:
+            obj.speed_x += 0.01 * self.level
+            obj.speed_y += 0.01 * self.level
+
+    def update(self):
+        self.update_level()
+        for obj in self.objects:
+            obj.move()
+
+    def draw(self, surface):
+        for obj in self.objects:
+            obj.draw(surface)
+        # Display current level
+        font = pygame.font.Font(None, 36)
+        text = font.render(f"Level: {self.level}", True, WHITE)
+        surface.blit(text, (10, 10))
+
+# Main game loop
+def main():
+    game = Game()
+    running = True
+    
+    while running:
+        screen.fill(BLACK)
+        mouse_pos = pygame.mouse.get_pos()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                game.button.check_slicing(game.objects, mouse_pos)
+        
+        game.update()
+        game.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+if __name__ == '__main__':
+    main()
+    pygame.quit()
